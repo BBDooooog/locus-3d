@@ -85,11 +85,12 @@ export function computeTrackStats(track: Track): TrackStats {
     if (stats.duration < 0) stats.duration = 0
   }
 
-  // Average speed: prefer computed from distance/duration
-  if (stats.duration > 0) {
-    stats.avgSpeed = stats.totalDistance / stats.duration
-  } else if (speedCount > 0) {
+  // Average speed: prefer GPX speed data from GPS doppler (matches Garmin display)
+  // Falls back to distance/duration if no speed fields present
+  if (speedCount > 0) {
     stats.avgSpeed = totalSpeed / speedCount
+  } else if (stats.duration > 0) {
+    stats.avgSpeed = stats.totalDistance / stats.duration
   }
 
   // Handle edge case of single-point tracks
