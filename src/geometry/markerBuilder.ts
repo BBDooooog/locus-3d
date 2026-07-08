@@ -32,7 +32,7 @@ export function buildMarkers(track: Track, altitudeScale: number = 3, trajectory
     const diag = Math.sqrt(
       (maxX - minX) ** 2 + (maxY - minY) ** 2 + (maxZ - minZ) ** 2,
     )
-    radius = Math.max(diag * 0.005, 0.5) // 0.5% of bounding-box diagonal
+    radius = Math.max(diag * 0.0015, 0.3) // 0.15% of bounding-box diagonal
   }
 
   const sphereGeom = new THREE.SphereGeometry(radius, 12, 12)

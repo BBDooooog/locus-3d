@@ -39,7 +39,7 @@ interface ViewerStore {
 }
 
 const defaultLayerVisibility: LayerVisibility = {
-  referencePlane: true,
+  referencePlane: false,
   projectionLines: true,
   groundProjection: true,
   compass: true,
@@ -47,8 +47,8 @@ const defaultLayerVisibility: LayerVisibility = {
 }
 
 const defaultSettings: ViewerSettings = {
-  altitudeScale: 3,
-  trajectoryScale: 0.5,
+  altitudeScale: 10,
+  trajectoryScale: 0.2,
   colorMode: 'altitude',
   autoRotate: true,
   autoRotateSpeed: 2,

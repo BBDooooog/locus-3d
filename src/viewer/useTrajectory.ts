@@ -37,6 +37,7 @@ export function useTrajectory() {
   })
   // Store the unscaled ref plane Y so it doesn't change with altitude scale
   const refPlaneYRef = useRef<number>(0)
+  const refPlaneModeRef = useRef<ReferencePlaneMode>('minAltitude')
 
   function getRefPlaneY(enuPositions: Float32Array, mode: ReferencePlaneMode): number {
     if (mode === 'seaLevel') return 0
@@ -47,18 +48,19 @@ export function useTrajectory() {
     return minY === Infinity ? 0 : minY
   }
 
-  /** Build reference plane + compass (fixed, unaffected by altitude scale) */
+  /** Build reference plane + compass */
   function buildFixedLayers(
     setup: THREE.Scene | THREE.Object3D | null,
     unscaledENU: Float32Array,
-    refPlaneMode: ReferencePlaneMode,
+    mode: ReferencePlaneMode,
   ) {
     if (!setup) return
     const old = layersRef.current
     if (old.refPlane) { setup.remove(old.refPlane); disposeLayers({ refPlane: old.refPlane }) }
     if (old.compass) { setup.remove(old.compass); disposeLayers({ compass: old.compass }) }
 
-    const refY = getRefPlaneY(unscaledENU, refPlaneMode)
+    refPlaneModeRef.current = mode
+    const refY = getRefPlaneY(unscaledENU, mode)
     refPlaneYRef.current = refY
 
     const bounds = computeXZBounds(unscaledENU)
@@ -71,6 +73,15 @@ export function useTrajectory() {
     layersRef.current = { ...layersRef.current, refPlane, compass }
   }
 
+  /** Find the minimum Y from ENU positions (for ref plane alignment) */
+  function minYFrom(enuPositions: Float32Array): number {
+    let minY = Infinity
+    for (let i = 1; i < enuPositions.length; i += 3) {
+      if (enuPositions[i] < minY) minY = enuPositions[i]
+    }
+    return minY === Infinity ? 0 : minY
+  }
+
   /** Build trajectory-dependent layers (affected by altitude scale) */
   function buildDynamicLayers(
     setup: THREE.Scene | THREE.Object3D | null,
@@ -81,7 +92,14 @@ export function useTrajectory() {
     if (old.projectionLines) { setup.remove(old.projectionLines); disposeLayers({ projectionLines: old.projectionLines }) }
     if (old.groundProjection) { setup.remove(old.groundProjection); disposeLayers({ groundProjection: old.groundProjection }) }
 
-    const refY = refPlaneYRef.current
+    // Reference plane Y from scaled data in minAltitude mode — ensures nothing goes below plane
+    const refY = refPlaneModeRef.current === 'seaLevel' ? 0 : minYFrom(enuPositions)
+    refPlaneYRef.current = refY
+
+    // Move the reference plane + compass to match
+    if (old.refPlane) old.refPlane.position.y = refY
+    if (old.compass) old.compass.position.y = refY + 1.0
+
     const projectionLines = buildProjectionLines(enuPositions, refY)
     const groundProjection = buildGroundProjection(enuPositions, refY)
 
