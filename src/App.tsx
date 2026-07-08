@@ -1,7 +1,8 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useViewerStore } from './store/useViewerStore'
+import { useTerrainStore } from './store/useTerrainStore'
 import { parseGPX } from './parser/gpxParser'
-import DropZone from './ui/DropZone'
+import HomePage from './ui/HomePage'
 import LoadingOverlay from './ui/LoadingOverlay'
 import ErrorToast from './ui/ErrorToast'
 import SceneCanvas from './viewer/SceneCanvas'
@@ -9,13 +10,27 @@ import Toolbar from './ui/Toolbar'
 import TrackInfoCard from './ui/TrackInfoCard'
 import ColorLegend from './ui/ColorLegend'
 import KeyboardHint from './ui/KeyboardHint'
+import TerrainPanel from './ui/TerrainPanel'
 
 export default function App() {
   const state = useViewerStore((s) => s.state)
   const setState = useViewerStore((s) => s.setState)
+  const track = useViewerStore((s) => s.track)
   const setTrack = useViewerStore((s) => s.setTrack)
   const setError = useViewerStore((s) => s.setError)
   const [dragOver, setDragOver] = useState(false)
+
+  const hasTrack = track !== null
+
+  // Terrain state
+  const terrainState = useTerrainStore((s) => s.state)
+  const isTerrainActive =
+    terrainState === 'loading' ||
+    terrainState === 'loaded' ||
+    terrainState === 'selected'
+
+  // Show 3D viewer when track is loaded OR terrain is active
+  const showViewer = hasTrack || isTerrainActive
 
   const handleFileDrop = useCallback(
     async (file: File) => {
@@ -51,7 +66,6 @@ export default function App() {
     (e: React.DragEvent) => {
       e.preventDefault()
       e.stopPropagation()
-      // Only show overlay in loaded state
       if (state === 'loaded') {
         setDragOver(true)
       }
@@ -87,8 +101,8 @@ export default function App() {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      {/* Empty State */}
-      {state === 'empty' && <DropZone />}
+      {/* Empty State — split GPX / DEM homepage */}
+      {state === 'empty' && !isTerrainActive && <HomePage />}
 
       {/* Loading State */}
       {state === 'loading' && <LoadingOverlay />}
@@ -96,14 +110,20 @@ export default function App() {
       {/* Error State */}
       {state === 'error' && <ErrorToast />}
 
-      {/* Loaded State — 3D viewer + overlays */}
-      {state === 'loaded' && (
+      {/* Viewer State — 3D viewer + overlays */}
+      {showViewer && (
         <>
           <SceneCanvas />
-          <TrackInfoCard />
-          <ColorLegend />
-          <Toolbar />
-          <KeyboardHint />
+          {hasTrack && <TrackInfoCard />}
+          {/* Right column: ColorLegend + TerrainPanel stacked */}
+          {(hasTrack || isTerrainActive) && (
+            <div className="fixed top-4 right-4 z-30 flex flex-col gap-3">
+              {hasTrack && <div className="self-end"><ColorLegend /></div>}
+              {isTerrainActive && <TerrainPanel variant="floating" />}
+            </div>
+          )}
+          {hasTrack && <Toolbar />}
+          {hasTrack && <KeyboardHint />}
 
           {/* Drop overlay for swapping files */}
           {dragOver && (

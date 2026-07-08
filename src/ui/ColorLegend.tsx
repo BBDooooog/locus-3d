@@ -62,7 +62,7 @@ export default function ColorLegend() {
   const isGradient = colorMode === 'gradient'
 
   return (
-    <div className="fixed top-4 right-4 z-30">
+    <div>
       <div className="px-3 py-2 rounded-xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-xl">
         <span className="text-[10px] text-white/40 block mb-1.5">{label}</span>
         {/* Minimal gradient bar */}

@@ -1,9 +1,12 @@
 import { useRef, useEffect, useCallback } from 'react'
 import * as THREE from 'three'
 import { useViewerStore } from '../store/useViewerStore'
+import { useTerrainStore } from '../store/useTerrainStore'
 import { useScene } from './useScene'
 import { useTrajectory } from './useTrajectory'
 import { useFlyover } from './useFlyover'
+import { TerrainManager } from '../terrain/TerrainManager'
+import { loadTerrainFromFile } from '../terrain/TerrainLoader'
 
 export default function SceneCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -18,9 +21,92 @@ export default function SceneCanvas() {
   } = useTrajectory()
   const { buildCurve, startFlyover, pauseFlyover, stopFlyover } = useFlyover()
 
+  const terrainManagerRef = useRef<TerrainManager | null>(null)
+
   const track = useViewerStore((s) => s.track)
   const settings = useViewerStore((s) => s.settings)
   const isFlyoverPlaying = useViewerStore((s) => s.isFlyoverPlaying)
+
+  // Terrain store subscriptions
+  const terrainState = useTerrainStore((s) => s.state)
+  const terrainFile = useTerrainStore((s) => s.file)
+  const terrainSettings = useTerrainStore((s) => s.settings)
+  const terrainSetLoaded = useTerrainStore((s) => s.setLoaded)
+  const terrainSetError = useTerrainStore((s) => s.setError)
+  const isTerrainLoaded = useTerrainStore((s) => s.state === 'loaded')
+
+  /** Get or create the TerrainManager (lazy init, scene must be ready) */
+  function getOrCreateManager(): TerrainManager | null {
+    if (terrainManagerRef.current) return terrainManagerRef.current
+    const setup = getSetup()
+    if (!setup) return null
+
+    const manager = new TerrainManager()
+    manager.attachToScene(setup.scene)
+    terrainManagerRef.current = manager
+    return manager
+  }
+
+  // Handle terrain loading trigger (state === 'loading')
+  useEffect(() => {
+    if (terrainState !== 'loading' || !terrainFile) return
+
+    const manager = getOrCreateManager()
+    if (!manager) return
+
+    let cancelled = false
+
+    loadTerrainFromFile(terrainFile, manager, terrainSettings)
+      .then((data) => {
+        if (cancelled) return
+        terrainSetLoaded(data, {
+          name: terrainFile.name,
+          size: terrainFile.size,
+        })
+      })
+      .catch((err) => {
+        if (cancelled) return
+        terrainSetError(err instanceof Error ? err.message : '地形加载失败')
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [terrainState, terrainFile, terrainSettings, terrainSetLoaded, terrainSetError])
+
+  // Fit camera to terrain on first load
+  const prevTerrainLoaded = useRef(false)
+  useEffect(() => {
+    if (!isTerrainLoaded) {
+      prevTerrainLoaded.current = false
+      return
+    }
+    if (prevTerrainLoaded.current) return
+    prevTerrainLoaded.current = true
+
+    const manager = terrainManagerRef.current
+    if (!manager) return
+
+    const box = manager.getBoundingBox()
+    if (box) {
+      fitCameraToBox(box)
+    }
+  }, [isTerrainLoaded, fitCameraToBox])
+
+  // Handle terrain removal & cleanup on unmount
+  useEffect(() => {
+    if (terrainState === 'idle') {
+      terrainManagerRef.current?.clear()
+    }
+  }, [terrainState])
+
+  // Dispose TerrainManager on unmount
+  useEffect(() => {
+    return () => {
+      terrainManagerRef.current?.dispose()
+      terrainManagerRef.current = null
+    }
+  }, [])
 
   // Load track when it changes
   useEffect(() => {
@@ -108,17 +194,27 @@ export default function SceneCanvas() {
         case 'r':
         case 'R':
           e.preventDefault()
-          // Re-fit camera to full scene
+          // Re-fit camera to full scene (trajectory + terrain)
+          const box = new THREE.Box3()
           const trajectory = setup.scene.children.find(
             (c) => c.type === 'Line2',
           ) as THREE.Object3D | undefined
           if (trajectory) {
-            const box = new THREE.Box3().setFromObject(trajectory)
-            // Also expand to include reference plane
-            const refPlaneGroup = setup.scene.children.find(
-              (c) => c instanceof THREE.Group && c.children.length >= 2,
-            )
-            if (refPlaneGroup) box.expandByObject(refPlaneGroup)
+            box.expandByObject(trajectory)
+          }
+          // Expand to include reference plane
+          const refPlaneGroup = setup.scene.children.find(
+            (c) => c instanceof THREE.Group && c.children.length >= 2,
+          )
+          if (refPlaneGroup) box.expandByObject(refPlaneGroup)
+          // Expand to include terrain
+          if (terrainManagerRef.current) {
+            const terrainBox = terrainManagerRef.current.getBoundingBox()
+            if (terrainBox) {
+              box.expandByObject(terrainManagerRef.current.getGroup())
+            }
+          }
+          if (!box.isEmpty()) {
             fitCameraToBox(box)
           }
           break
