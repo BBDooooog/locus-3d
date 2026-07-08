@@ -17,6 +17,9 @@ interface ViewerStore {
   isFlyoverPlaying: boolean
   flyoverSpeed: number
 
+  // UI visibility
+  toolbarVisible: boolean
+
   // Actions
   setState: (state: ViewerState) => void
   setError: (message: string) => void
@@ -27,6 +30,8 @@ interface ViewerStore {
   setAutoRotateSpeed: (speed: number) => void
   setFlyoverPlaying: (playing: boolean) => void
   setFlyoverSpeed: (speed: number) => void
+  showToolbar: () => void
+  hideToolbar: () => void
   reset: () => void
 }
 
@@ -47,6 +52,7 @@ export const useViewerStore = create<ViewerStore>((set) => ({
   settings: { ...defaultSettings },
   isFlyoverPlaying: false,
   flyoverSpeed: 1,
+  toolbarVisible: false,
 
   setState: (state) => set({ state }),
   setError: (message) => set({ state: 'error', errorMessage: message }),
@@ -62,6 +68,8 @@ export const useViewerStore = create<ViewerStore>((set) => ({
     set((s) => ({ settings: { ...s.settings, autoRotateSpeed: speed } })),
   setFlyoverPlaying: (playing) => set({ isFlyoverPlaying: playing }),
   setFlyoverSpeed: (speed) => set({ flyoverSpeed: speed }),
+  showToolbar: () => set({ toolbarVisible: true }),
+  hideToolbar: () => set({ toolbarVisible: false }),
   reset: () =>
     set({
       state: 'empty',
@@ -71,5 +79,6 @@ export const useViewerStore = create<ViewerStore>((set) => ({
       settings: { ...defaultSettings },
       isFlyoverPlaying: false,
       flyoverSpeed: 1,
+      toolbarVisible: false,
     }),
 }))

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { Keyboard } from 'lucide-react'
+import { useViewerStore } from '../store/useViewerStore'
 
 const SHORTCUTS = [
   { key: 'Space', action: '切换自动旋转' },
@@ -10,17 +10,16 @@ const SHORTCUTS = [
 ]
 
 export default function KeyboardHint() {
-  const [show, setShow] = useState(true)
-
-  useEffect(() => {
-    const timer = setTimeout(() => setShow(false), 8000)
-    return () => clearTimeout(timer)
-  }, [])
-
-  if (!show) return null
+  const toolbarVisible = useViewerStore((s) => s.toolbarVisible)
 
   return (
-    <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-30 transition-all duration-700">
+    <div
+      className={`fixed bottom-24 left-1/2 -translate-x-1/2 z-30 transition-all duration-400 ${
+        toolbarVisible
+          ? 'opacity-100 translate-y-0'
+          : 'opacity-0 translate-y-2 pointer-events-none'
+      }`}
+    >
       <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 backdrop-blur-md border border-white/10">
         <Keyboard size={12} className="text-white/30" />
         {SHORTCUTS.map(({ key, action }) => (
