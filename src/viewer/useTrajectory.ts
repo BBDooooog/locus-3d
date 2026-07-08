@@ -12,6 +12,7 @@ import {
   buildReferencePlane,
   buildProjectionLines,
   buildGroundProjection,
+  buildCompassLabels,
   disposeLayers,
   computeXZBounds,
 } from '../geometry/sceneLayers'
@@ -22,6 +23,7 @@ interface Layers {
   refPlane: THREE.GridHelper | null
   projectionLines: THREE.LineSegments | null
   groundProjection: THREE.Line | null
+  compass: THREE.Group | null
 }
 
 export function useTrajectory() {
@@ -31,6 +33,7 @@ export function useTrajectory() {
     refPlane: null,
     projectionLines: null,
     groundProjection: null,
+    compass: null,
   })
 
   function getRefPlaneY(enuPositions: Float32Array, mode: ReferencePlaneMode): number {
@@ -42,7 +45,7 @@ export function useTrajectory() {
     return minY === Infinity ? 0 : minY
   }
 
-  /** Build all 4 layers from ENU positions */
+  /** Build all layers from ENU positions */
   function buildAllLayers(
     enuPositions: Float32Array,
     refPlaneY: number,
@@ -52,6 +55,7 @@ export function useTrajectory() {
       refPlane: buildReferencePlane(refPlaneY, bounds),
       projectionLines: buildProjectionLines(enuPositions, refPlaneY),
       groundProjection: buildGroundProjection(enuPositions, refPlaneY),
+      compass: buildCompassLabels(bounds, refPlaneY),
     }
   }
 
@@ -84,6 +88,7 @@ export function useTrajectory() {
       setup.scene.add(layers.refPlane!)
       setup.scene.add(layers.projectionLines!)
       setup.scene.add(layers.groundProjection!)
+      setup.scene.add(layers.compass!)
 
       trajectoryRef.current = trajectory
       markersRef.current = markers
@@ -167,7 +172,7 @@ export function useTrajectory() {
     disposeLayers(layersRef.current)
     trajectoryRef.current = null
     markersRef.current = null
-    layersRef.current = { refPlane: null, projectionLines: null, groundProjection: null }
+    layersRef.current = { refPlane: null, projectionLines: null, groundProjection: null, compass: null }
   }, [])
 
   return {

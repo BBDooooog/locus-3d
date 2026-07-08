@@ -146,11 +146,81 @@ export function buildGroundProjection(
   return line
 }
 
+/**
+ * Build compass direction labels (N / S / E / W) as canvas-based sprites.
+ * Placed at the center of the reference plane, spanning ~20% of plane size.
+ * ENU mapping: East → +X, North → +Z.
+ */
+export function buildCompassLabels(
+  bounds: PlaneBounds,
+  refPlaneY: number,
+): THREE.Group {
+  const group = new THREE.Group()
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minZ + bounds.maxZ) / 2
+  const planeW = bounds.maxX - bounds.minX
+  const planeH = bounds.maxZ - bounds.minZ
+  const planeSize = Math.max(planeW, planeH)
+
+  // Offset from center = 10% of plane (so compass spans ~20%)
+  const offset = planeSize * 0.1
+  // Each sprite size = 6% of plane
+  const spriteSize = planeSize * 0.06
+
+  const directions = [
+    { label: 'N', x: centerX, z: centerZ + offset },
+    { label: 'S', x: centerX, z: centerZ - offset },
+    { label: 'E', x: centerX + offset, z: centerZ },
+    { label: 'W', x: centerX - offset, z: centerZ },
+  ]
+
+  for (const { label, x, z } of directions) {
+    const sprite = makeTextSprite(label)
+    sprite.position.set(x, refPlaneY + 0.3, z)
+    sprite.scale.set(spriteSize, spriteSize, 1)
+    group.add(sprite)
+  }
+
+  return group
+}
+
+/** Create a single text sprite using a canvas */
+function makeTextSprite(text: string): THREE.Sprite {
+  const size = 128
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')!
+
+  ctx.fillStyle = '#ffffff'
+  ctx.font = 'bold 72px Inter, sans-serif'
+  ctx.textAlign = 'center'
+  ctx.textBaseline = 'middle'
+  ctx.fillText(text, size / 2, size / 2)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.minFilter = THREE.LinearFilter
+  texture.magFilter = THREE.LinearFilter
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    opacity: 0.2,
+    depthTest: true,
+    depthWrite: false,
+  })
+
+  const sprite = new THREE.Sprite(material)
+  sprite.renderOrder = 3
+  return sprite
+}
+
 /** Dispose all scene layer objects */
 export function disposeLayers(layers: {
   refPlane?: THREE.GridHelper | null
   projectionLines?: THREE.LineSegments | null
   groundProjection?: THREE.Line | null
+  compass?: THREE.Group | null
 }) {
   if (layers.refPlane) {
     layers.refPlane.geometry.dispose()
@@ -163,5 +233,14 @@ export function disposeLayers(layers: {
   if (layers.groundProjection) {
     layers.groundProjection.geometry.dispose()
     ;(layers.groundProjection.material as THREE.Material).dispose()
+  }
+  if (layers.compass) {
+    layers.compass.traverse((child) => {
+      if (child instanceof THREE.Sprite) {
+        const mat = child.material as THREE.SpriteMaterial
+        mat.map?.dispose()
+        mat.dispose()
+      }
+    })
   }
 }
