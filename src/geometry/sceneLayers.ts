@@ -164,8 +164,8 @@ export function buildCompassLabels(
 
   // Offset from center = 10% of plane (so compass spans ~20%)
   const offset = planeSize * 0.1
-  // Each sprite size = 6% of plane
-  const spriteSize = planeSize * 0.06
+  // Each sprite size = 8% of plane
+  const spriteSize = planeSize * 0.08
 
   const directions = [
     { label: 'N', x: centerX, z: centerZ + offset },
@@ -184,19 +184,33 @@ export function buildCompassLabels(
   return group
 }
 
-/** Create a single text sprite using a canvas */
+/** Create a single text sprite with a prominent circular background */
 function makeTextSprite(text: string): THREE.Sprite {
-  const size = 128
+  const size = 256
   const canvas = document.createElement('canvas')
   canvas.width = size
   canvas.height = size
   const ctx = canvas.getContext('2d')!
 
+  const cx = size / 2
+  const cy = size / 2
+  const r = size * 0.42
+
+  // Circular background — dark with subtle border
+  ctx.beginPath()
+  ctx.arc(cx, cy, r, 0, Math.PI * 2)
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
+  ctx.fill()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
+  ctx.lineWidth = 3
+  ctx.stroke()
+
+  // Bold text
   ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 72px Inter, sans-serif'
+  ctx.font = 'bold 100px Inter, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, size / 2, size / 2)
+  ctx.fillText(text, cx, cy + 2)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.minFilter = THREE.LinearFilter
@@ -205,7 +219,7 @@ function makeTextSprite(text: string): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.2,
+    opacity: 0.8,
     depthTest: true,
     depthWrite: false,
   })
