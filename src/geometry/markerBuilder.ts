@@ -15,21 +15,27 @@ export interface Markers {
 export function buildMarkers(track: Track, altitudeScale: number = 3): Markers {
   const allPositions = wgs84ToENU(track.points, altitudeScale)
 
-  // Determine marker radius as a fraction of the bounding-box diagonal
-  let radius = 5 // default
+  // Determine marker radius based on actual bounding box size
+  let radius = 1 // default
   if (track.points.length >= 2) {
-    let maxDim = 0
+    let minX = Infinity, maxX = -Infinity
+    let minY = Infinity, maxY = -Infinity
+    let minZ = Infinity, maxZ = -Infinity
     for (let i = 0; i < allPositions.length; i += 3) {
       const x = allPositions[i]
       const y = allPositions[i + 1]
       const z = allPositions[i + 2]
-      const mag = Math.sqrt(x * x + y * y + z * z)
-      if (mag > maxDim) maxDim = mag
+      if (x < minX) minX = x; if (x > maxX) maxX = x
+      if (y < minY) minY = y; if (y > maxY) maxY = y
+      if (z < minZ) minZ = z; if (z > maxZ) maxZ = z
     }
-    radius = Math.max(maxDim * 0.015, 1) // 1.5% of max extent, minimum 1 unit
+    const diag = Math.sqrt(
+      (maxX - minX) ** 2 + (maxY - minY) ** 2 + (maxZ - minZ) ** 2,
+    )
+    radius = Math.max(diag * 0.005, 0.5) // 0.5% of bounding-box diagonal
   }
 
-  const sphereGeom = new THREE.SphereGeometry(radius, 16, 16)
+  const sphereGeom = new THREE.SphereGeometry(radius, 12, 12)
 
   const startMat = new THREE.MeshStandardMaterial({
     color: 0x22c55e,
@@ -54,7 +60,7 @@ export function buildMarkers(track: Track, altitudeScale: number = 3): Markers {
     allPositions[2],
   )
 
-  const endGeom = new THREE.SphereGeometry(radius, 16, 16)
+  const endGeom = new THREE.SphereGeometry(radius, 12, 12)
   const lastIdx = (track.points.length - 1) * 3
   const end = new THREE.Mesh(endGeom, endMat)
   end.position.set(
