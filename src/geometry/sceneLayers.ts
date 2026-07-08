@@ -1,41 +1,70 @@
 import * as THREE from 'three'
 
+export interface PlaneBounds {
+  minX: number
+  maxX: number
+  minZ: number
+  maxZ: number
+}
+
 /**
- * Build a large semi-transparent reference plane at the given Y height.
- * This serves as the visual ground reference for the trajectory.
+ * Compute the XZ bounding box of ENU positions, with 10% margin.
  */
-export function buildReferencePlane(minY: number, size: number): THREE.Group {
-  const group = new THREE.Group()
+export function computeXZBounds(enuPositions: Float32Array): PlaneBounds {
+  let minX = Infinity,
+    maxX = -Infinity
+  let minZ = Infinity,
+    maxZ = -Infinity
 
-  // Main plane — subtle grey, low opacity
-  const planeGeom = new THREE.PlaneGeometry(size, size)
-  const planeMat = new THREE.MeshBasicMaterial({
-    color: 0x2a2a3a,
-    transparent: true,
-    opacity: 0.25,
-    side: THREE.DoubleSide,
-    depthWrite: false,
-  })
-  const plane = new THREE.Mesh(planeGeom, planeMat)
-  plane.rotation.x = -Math.PI / 2
-  plane.position.y = minY
-  plane.renderOrder = 1
-  group.add(plane)
+  for (let i = 0; i < enuPositions.length; i += 3) {
+    const x = enuPositions[i]
+    const z = enuPositions[i + 2]
+    if (x < minX) minX = x
+    if (x > maxX) maxX = x
+    if (z < minZ) minZ = z
+    if (z > maxZ) maxZ = z
+  }
 
-  // Subtle grid overlay on the plane
-  const gridSize = size
-  const gridDivs = Math.floor(size / 10) // grid cell = 10 units
-  const gridHelper = new THREE.GridHelper(gridSize, gridDivs, '#ffffff10', '#ffffff06')
-  gridHelper.position.y = minY + 0.05 // slightly above plane to avoid z-fighting
-  gridHelper.renderOrder = 2
-  group.add(gridHelper)
+  // Add 10% margin
+  const marginX = (maxX - minX) * 0.1 || 10
+  const marginZ = (maxZ - minZ) * 0.1 || 10
 
-  return group
+  return {
+    minX: minX - marginX,
+    maxX: maxX + marginX,
+    minZ: minZ - marginZ,
+    maxZ: maxZ + marginZ,
+  }
+}
+
+/**
+ * Build reference plane — just a GridHelper at the reference Y height.
+ * No separate plane mesh to avoid z-fighting.
+ * Size matches the trajectory XZ bounds + 10%.
+ */
+export function buildReferencePlane(
+  refPlaneY: number,
+  bounds: PlaneBounds,
+): THREE.GridHelper {
+  const sizeX = bounds.maxX - bounds.minX
+  const sizeZ = bounds.maxZ - bounds.minZ
+  const size = Math.max(sizeX, sizeZ)
+  const centerX = (bounds.minX + bounds.maxX) / 2
+  const centerZ = (bounds.minZ + bounds.maxZ) / 2
+
+  // Grid cell size roughly 5% of the plane size, min 10 divisions
+  const divisions = Math.max(Math.round(size / 20), 10)
+
+  const grid = new THREE.GridHelper(size, divisions, '#ffffff12', '#ffffff06')
+  grid.position.set(centerX, refPlaneY, centerZ)
+  grid.renderOrder = 1
+
+  return grid
 }
 
 /**
  * Build vertical projection lines from each trajectory point down to the reference plane.
- * Uses LineSegments for efficient rendering — each point becomes one vertical segment.
+ * Uses LineSegments — each point → one vertical segment.
  */
 export function buildProjectionLines(
   enuPositions: Float32Array,
@@ -43,23 +72,23 @@ export function buildProjectionLines(
 ): THREE.LineSegments {
   const pointCount = enuPositions.length / 3
 
-  // Each segment has 2 vertices: (top) and (projected to plane)
+  // Each segment: 2 vertices (top, bottom on plane)
   const vertices = new Float32Array(pointCount * 2 * 3)
 
   for (let i = 0; i < pointCount; i++) {
     const srcIdx = i * 3
-    const dstIdx = i * 6 // 2 vertices per segment
+    const dstIdx = i * 6
 
     const x = enuPositions[srcIdx]
     const y = enuPositions[srcIdx + 1]
     const z = enuPositions[srcIdx + 2]
 
-    // Top vertex
+    // Top (trajectory point)
     vertices[dstIdx] = x
     vertices[dstIdx + 1] = y
     vertices[dstIdx + 2] = z
 
-    // Bottom vertex (on reference plane)
+    // Bottom (on reference plane)
     vertices[dstIdx + 3] = x
     vertices[dstIdx + 4] = refPlaneY
     vertices[dstIdx + 5] = z
@@ -72,8 +101,8 @@ export function buildProjectionLines(
     color: 0x8899bb,
     transparent: true,
     opacity: 0.12,
-    depthWrite: true,
     depthTest: true,
+    depthWrite: true,
   })
 
   const lines = new THREE.LineSegments(geometry, material)
@@ -83,7 +112,7 @@ export function buildProjectionLines(
 
 /**
  * Build the ground projection — a flat "shadow" of the trajectory on the reference plane.
- * Uses Line2 for variable-width rendering (thin, subtle line).
+ * Offset slightly above the grid to prevent z-fighting.
  */
 export function buildGroundProjection(
   enuPositions: Float32Array,
@@ -91,13 +120,14 @@ export function buildGroundProjection(
 ): THREE.Line {
   const pointCount = enuPositions.length / 3
 
-  // Build flat positions on the reference plane
   const flatPositions = new Float32Array(pointCount * 3)
+  const planeY = refPlaneY + 0.1 // slight offset above grid
+
   for (let i = 0; i < pointCount; i++) {
     const srcIdx = i * 3
-    flatPositions[srcIdx] = enuPositions[srcIdx]       // X (east)
-    flatPositions[srcIdx + 1] = refPlaneY                // Y (on plane)
-    flatPositions[srcIdx + 2] = enuPositions[srcIdx + 2] // Z (north)
+    flatPositions[srcIdx] = enuPositions[srcIdx]
+    flatPositions[srcIdx + 1] = planeY
+    flatPositions[srcIdx + 2] = enuPositions[srcIdx + 2]
   }
 
   const geometry = new THREE.BufferGeometry()
@@ -106,7 +136,7 @@ export function buildGroundProjection(
   const material = new THREE.LineBasicMaterial({
     color: 0x667799,
     transparent: true,
-    opacity: 0.5,
+    opacity: 0.45,
     depthTest: true,
     depthWrite: true,
   })
@@ -116,25 +146,15 @@ export function buildGroundProjection(
   return line
 }
 
-/** Dispose all resources in a scene layers group */
-export function disposeLayers(
-  layers: {
-    refPlane?: THREE.Group | null
-    projectionLines?: THREE.LineSegments | null
-    groundProjection?: THREE.Line | null
-  },
-) {
+/** Dispose all scene layer objects */
+export function disposeLayers(layers: {
+  refPlane?: THREE.GridHelper | null
+  projectionLines?: THREE.LineSegments | null
+  groundProjection?: THREE.Line | null
+}) {
   if (layers.refPlane) {
-    layers.refPlane.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose()
-        ;(child.material as THREE.Material).dispose()
-      }
-      if (child instanceof THREE.GridHelper) {
-        child.geometry.dispose()
-        ;(child.material as THREE.Material).dispose()
-      }
-    })
+    layers.refPlane.geometry.dispose()
+    ;(layers.refPlane.material as THREE.Material).dispose()
   }
   if (layers.projectionLines) {
     layers.projectionLines.geometry.dispose()
