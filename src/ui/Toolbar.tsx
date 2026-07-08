@@ -7,9 +7,10 @@ import {
   Pause,
   Camera,
   Maximize2,
+  Layers,
 } from 'lucide-react'
 import { useViewerStore } from '../store/useViewerStore'
-import type { ColorMode } from '../types/track'
+import type { ColorMode, ReferencePlaneMode } from '../types/track'
 
 const ALTITUDE_PRESETS = [1, 2, 3, 5, 10]
 const HIDE_DELAY = 3000
@@ -30,6 +31,7 @@ export default function Toolbar() {
   const setColorMode = useViewerStore((s) => s.setColorMode)
   const setAutoRotate = useViewerStore((s) => s.setAutoRotate)
   const setFlyoverPlaying = useViewerStore((s) => s.setFlyoverPlaying)
+  const setReferencePlaneMode = useViewerStore((s) => s.setReferencePlaneMode)
   const showToolbar = useViewerStore((s) => s.showToolbar)
   const hideToolbar = useViewerStore((s) => s.hideToolbar)
 
@@ -196,6 +198,34 @@ export default function Toolbar() {
           >
             {isFlyoverPlaying ? <Pause size={14} /> : <Play size={14} />}
             <span>飞行</span>
+          </button>
+
+          <div className="w-px h-5 bg-white/10" />
+
+          {/* Reference Plane */}
+          <button
+            onClick={() =>
+              setReferencePlaneMode(
+                settings.referencePlaneMode === 'minAltitude'
+                  ? 'seaLevel'
+                  : 'minAltitude',
+              )
+            }
+            className={`flex items-center gap-1.5 px-2 py-1 text-xs rounded-lg transition-all ${
+              settings.referencePlaneMode === 'seaLevel'
+                ? 'bg-indigo-500/20 text-indigo-200'
+                : 'text-white/40 hover:text-white/70 hover:bg-white/5'
+            }`}
+            title={
+              settings.referencePlaneMode === 'minAltitude'
+                ? '参考平面：轨迹最低点'
+                : '参考平面：海平面 (0m)'
+            }
+          >
+            <Layers size={14} />
+            <span>
+              {settings.referencePlaneMode === 'minAltitude' ? '最低点' : '海平面'}
+            </span>
           </button>
 
           <div className="w-px h-5 bg-white/10" />

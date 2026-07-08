@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Track, ColorMode, ViewerState, ViewerSettings } from '../types/track'
+import type { Track, ColorMode, ViewerState, ViewerSettings, ReferencePlaneMode } from '../types/track'
 
 interface ViewerStore {
   // App state
@@ -30,6 +30,7 @@ interface ViewerStore {
   setAutoRotateSpeed: (speed: number) => void
   setFlyoverPlaying: (playing: boolean) => void
   setFlyoverSpeed: (speed: number) => void
+  setReferencePlaneMode: (mode: ReferencePlaneMode) => void
   showToolbar: () => void
   hideToolbar: () => void
   reset: () => void
@@ -40,8 +41,7 @@ const defaultSettings: ViewerSettings = {
   colorMode: 'altitude',
   autoRotate: true,
   autoRotateSpeed: 2,
-  showGrid: true,
-  showAxis: true,
+  referencePlaneMode: 'minAltitude',
 }
 
 export const useViewerStore = create<ViewerStore>((set) => ({
@@ -68,6 +68,8 @@ export const useViewerStore = create<ViewerStore>((set) => ({
     set((s) => ({ settings: { ...s.settings, autoRotateSpeed: speed } })),
   setFlyoverPlaying: (playing) => set({ isFlyoverPlaying: playing }),
   setFlyoverSpeed: (speed) => set({ flyoverSpeed: speed }),
+  setReferencePlaneMode: (mode) =>
+    set((s) => ({ settings: { ...s.settings, referencePlaneMode: mode } })),
   showToolbar: () => set({ toolbarVisible: true }),
   hideToolbar: () => set({ toolbarVisible: false }),
   reset: () =>

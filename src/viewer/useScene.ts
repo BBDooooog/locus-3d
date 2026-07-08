@@ -7,8 +7,6 @@ export interface SceneSetup {
   camera: THREE.PerspectiveCamera
   renderer: THREE.WebGLRenderer
   controls: OrbitControls
-  grid: THREE.GridHelper
-  axes: THREE.AxesHelper
   ambientLight: THREE.AmbientLight
   directionalLight: THREE.DirectionalLight
 }
@@ -24,7 +22,8 @@ export function useScene(containerRef: React.RefObject<HTMLDivElement | null>) {
     // --- Scene ---
     const scene = new THREE.Scene()
     scene.background = new THREE.Color('#1a1a2e')
-    scene.fog = new THREE.Fog('#1a1a2e', 500, 50000)
+    // Fog pushed far back so the reference plane remains visible
+    scene.fog = new THREE.Fog('#1a1a2e', 5000, 100000)
 
     // --- Camera ---
     const camera = new THREE.PerspectiveCamera(
@@ -68,21 +67,11 @@ export function useScene(containerRef: React.RefObject<HTMLDivElement | null>) {
     directionalLight.position.set(1, 1, 0.5)
     scene.add(directionalLight)
 
-    // --- Grid ---
-    const grid = new THREE.GridHelper(200, 40, '#ffffff15', '#ffffff08')
-    scene.add(grid)
-
-    // --- Axes ---
-    const axes = new THREE.AxesHelper(50)
-    scene.add(axes)
-
     setupRef.current = {
       scene,
       camera,
       renderer,
       controls,
-      grid,
-      axes,
       ambientLight,
       directionalLight,
     }

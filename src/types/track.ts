@@ -17,11 +17,12 @@ export type ColorMode = 'single' | 'altitude' | 'speed' | 'heartRate' | 'cadence
 
 export type ViewerState = 'empty' | 'loading' | 'error' | 'loaded'
 
+export type ReferencePlaneMode = 'minAltitude' | 'seaLevel'
+
 export interface ViewerSettings {
   altitudeScale: number
   colorMode: ColorMode
   autoRotate: boolean
   autoRotateSpeed: number
-  showGrid: boolean
-  showAxis: boolean
+  referencePlaneMode: ReferencePlaneMode
 }

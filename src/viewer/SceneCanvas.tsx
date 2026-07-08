@@ -4,12 +4,12 @@ import { useViewerStore } from '../store/useViewerStore'
 import { useScene } from './useScene'
 import { useTrajectory } from './useTrajectory'
 import { useFlyover } from './useFlyover'
-import type { SceneSetup } from './useScene'
 
 export default function SceneCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { getSetup, fitCameraToBox } = useScene(containerRef)
-  const { loadTrack, changeAltitudeScale, changeColorMode } = useTrajectory()
+  const { loadTrack, changeAltitudeScale, changeColorMode, changeReferencePlane } =
+    useTrajectory()
   const { buildCurve, startFlyover, pauseFlyover, stopFlyover } = useFlyover()
 
   const track = useViewerStore((s) => s.track)
@@ -21,14 +21,19 @@ export default function SceneCanvas() {
     const setup = getSetup()
     if (!setup || !track) return
 
-    const box = loadTrack(setup, track, settings.colorMode, settings.altitudeScale)
+    const box = loadTrack(
+      setup,
+      track,
+      settings.colorMode,
+      settings.altitudeScale,
+      settings.referencePlaneMode,
+    )
     buildCurve(track, settings.altitudeScale)
 
     if (box) {
       fitCameraToBox(box)
     }
 
-    // Auto rotate
     setup.controls.autoRotate = settings.autoRotate
     setup.controls.autoRotateSpeed = settings.autoRotateSpeed
   }, [track]) // Only on track change
@@ -44,9 +49,9 @@ export default function SceneCanvas() {
   // Sync altitude scale
   useEffect(() => {
     if (!track) return
-    changeAltitudeScale(track, settings.altitudeScale)
+    changeAltitudeScale(track, settings.altitudeScale, settings.referencePlaneMode)
     buildCurve(track, settings.altitudeScale)
-  }, [settings.altitudeScale, track, changeAltitudeScale, buildCurve])
+  }, [settings.altitudeScale, track, changeAltitudeScale, buildCurve, settings.referencePlaneMode])
 
   // Sync color mode
   useEffect(() => {
@@ -54,13 +59,11 @@ export default function SceneCanvas() {
     changeColorMode(track, settings.colorMode)
   }, [settings.colorMode, track, changeColorMode])
 
-  // Sync grid/axis visibility
+  // Sync reference plane mode
   useEffect(() => {
-    const setup = getSetup()
-    if (!setup) return
-    setup.grid.visible = settings.showGrid
-    setup.axes.visible = settings.showAxis
-  }, [settings.showGrid, settings.showAxis, getSetup])
+    if (!track) return
+    changeReferencePlane(track, settings.altitudeScale, settings.referencePlaneMode)
+  }, [settings.referencePlaneMode, track, settings.altitudeScale, changeReferencePlane])
 
   // Flyover
   useEffect(() => {
@@ -87,10 +90,17 @@ export default function SceneCanvas() {
         case 'r':
         case 'R':
           e.preventDefault()
-          // Re-fit camera
-          const trajectory = setup.scene.children.find((c) => c.type === 'Line2') as THREE.Object3D | undefined
+          // Re-fit camera to full scene
+          const trajectory = setup.scene.children.find(
+            (c) => c.type === 'Line2',
+          ) as THREE.Object3D | undefined
           if (trajectory) {
             const box = new THREE.Box3().setFromObject(trajectory)
+            // Also expand to include reference plane
+            const refPlaneGroup = setup.scene.children.find(
+              (c) => c instanceof THREE.Group && c.children.length >= 2,
+            )
+            if (refPlaneGroup) box.expandByObject(refPlaneGroup)
             fitCameraToBox(box)
           }
           break
