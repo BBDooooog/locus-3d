@@ -19,9 +19,10 @@ export function buildTrajectory(
   track: Track,
   colorMode: ColorMode,
   altitudeScale: number,
+  trajectoryScale: number = 1,
   lineWidth: number = 2,
 ): TrajectoryLine {
-  const positions = wgs84ToENU(track.points, altitudeScale)
+  const positions = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
   const colors = buildColors(track, colorMode)
 
   const geometry = new LineGeometry()
@@ -60,8 +61,9 @@ export function updateAltitudeScale(
   track: Track,
   line: Line2,
   altitudeScale: number,
+  trajectoryScale: number = 1,
 ): void {
-  const positions = wgs84ToENU(track.points, altitudeScale)
+  const positions = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
   const geometry = line.geometry as LineGeometry
   geometry.setPositions(positions)
 }

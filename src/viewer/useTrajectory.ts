@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import * as THREE from 'three'
-import type { Track, ColorMode, ReferencePlaneMode } from '../types/track'
+import type { Track, ColorMode, ReferencePlaneMode, LayerVisibility } from '../types/track'
 import {
   buildTrajectory,
   updateAltitudeScale,
@@ -35,6 +35,8 @@ export function useTrajectory() {
     groundProjection: null,
     compass: null,
   })
+  // Store the unscaled ref plane Y so it doesn't change with altitude scale
+  const refPlaneYRef = useRef<number>(0)
 
   function getRefPlaneY(enuPositions: Float32Array, mode: ReferencePlaneMode): number {
     if (mode === 'seaLevel') return 0
@@ -45,18 +47,48 @@ export function useTrajectory() {
     return minY === Infinity ? 0 : minY
   }
 
-  /** Build all layers from ENU positions */
-  function buildAllLayers(
+  /** Build reference plane + compass (fixed, unaffected by altitude scale) */
+  function buildFixedLayers(
+    setup: THREE.Scene | THREE.Object3D | null,
+    unscaledENU: Float32Array,
+    refPlaneMode: ReferencePlaneMode,
+  ) {
+    if (!setup) return
+    const old = layersRef.current
+    if (old.refPlane) { setup.remove(old.refPlane); disposeLayers({ refPlane: old.refPlane }) }
+    if (old.compass) { setup.remove(old.compass); disposeLayers({ compass: old.compass }) }
+
+    const refY = getRefPlaneY(unscaledENU, refPlaneMode)
+    refPlaneYRef.current = refY
+
+    const bounds = computeXZBounds(unscaledENU)
+    const refPlane = buildReferencePlane(refY, bounds)
+    const compass = buildCompassLabels(bounds, refY)
+
+    setup.add(refPlane)
+    setup.add(compass)
+
+    layersRef.current = { ...layersRef.current, refPlane, compass }
+  }
+
+  /** Build trajectory-dependent layers (affected by altitude scale) */
+  function buildDynamicLayers(
+    setup: THREE.Scene | THREE.Object3D | null,
     enuPositions: Float32Array,
-    refPlaneY: number,
-  ): Layers {
-    const bounds = computeXZBounds(enuPositions)
-    return {
-      refPlane: buildReferencePlane(refPlaneY, bounds),
-      projectionLines: buildProjectionLines(enuPositions, refPlaneY),
-      groundProjection: buildGroundProjection(enuPositions, refPlaneY),
-      compass: buildCompassLabels(bounds, refPlaneY),
-    }
+  ) {
+    if (!setup) return
+    const old = layersRef.current
+    if (old.projectionLines) { setup.remove(old.projectionLines); disposeLayers({ projectionLines: old.projectionLines }) }
+    if (old.groundProjection) { setup.remove(old.groundProjection); disposeLayers({ groundProjection: old.groundProjection }) }
+
+    const refY = refPlaneYRef.current
+    const projectionLines = buildProjectionLines(enuPositions, refY)
+    const groundProjection = buildGroundProjection(enuPositions, refY)
+
+    setup.add(projectionLines)
+    setup.add(groundProjection)
+
+    layersRef.current = { ...layersRef.current, projectionLines, groundProjection }
   }
 
   const loadTrack = useCallback(
@@ -66,89 +98,112 @@ export function useTrajectory() {
       colorMode: ColorMode,
       altitudeScale: number,
       referencePlaneMode: ReferencePlaneMode,
+      trajectoryScale: number,
     ) => {
       trajectoryRef.current?.dispose()
       markersRef.current?.dispose()
       disposeLayers(layersRef.current)
 
-      const enuPositions = wgs84ToENU(track.points, altitudeScale)
+      const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
+      const unscaledENU = wgs84ToENU(track.points, 1, trajectoryScale)
 
       // Trajectory
-      const trajectory = buildTrajectory(track, colorMode, altitudeScale)
+      const trajectory = buildTrajectory(track, colorMode, altitudeScale, trajectoryScale)
       setup.scene.add(trajectory.line)
 
       // Markers
-      const markers = buildMarkers(track, altitudeScale)
+      const markers = buildMarkers(track, altitudeScale, trajectoryScale)
       setup.scene.add(markers.start)
       setup.scene.add(markers.end)
 
-      // Layers
-      const refPlaneY = getRefPlaneY(enuPositions, referencePlaneMode)
-      const layers = buildAllLayers(enuPositions, refPlaneY)
-      setup.scene.add(layers.refPlane!)
-      setup.scene.add(layers.projectionLines!)
-      setup.scene.add(layers.groundProjection!)
-      setup.scene.add(layers.compass!)
+      // Fixed layers (unscaled)
+      buildFixedLayers(setup.scene, unscaledENU, referencePlaneMode)
+
+      // Dynamic layers (scaled)
+      buildDynamicLayers(setup.scene, scaledENU)
 
       trajectoryRef.current = trajectory
       markersRef.current = markers
-      layersRef.current = layers
 
       const box = new THREE.Box3()
       box.expandByObject(trajectory.line)
-      box.expandByObject(layers.refPlane!)
+      if (layersRef.current.refPlane) box.expandByObject(layersRef.current.refPlane)
       return box
     },
     [],
   )
 
   const changeAltitudeScale = useCallback(
-    (track: Track, altitudeScale: number, referencePlaneMode: ReferencePlaneMode) => {
+    (track: Track, altitudeScale: number, trajectoryScale: number) => {
       const trajectory = trajectoryRef.current
       if (!trajectory) return
 
-      updateAltitudeScale(track, trajectory.line, altitudeScale)
+      updateAltitudeScale(track, trajectory.line, altitudeScale, trajectoryScale)
 
       if (markersRef.current) {
         const oldM = markersRef.current
-        const newM = buildMarkers(track, altitudeScale)
+        const newM = buildMarkers(track, altitudeScale, trajectoryScale)
         oldM.start.position.copy(newM.start.position)
         oldM.end.position.copy(newM.end.position)
         newM.dispose()
       }
 
-      const enuPositions = wgs84ToENU(track.points, altitudeScale)
-      const refPlaneY = getRefPlaneY(enuPositions, referencePlaneMode)
-
-      const setup = trajectory.line.parent
-      if (setup) {
-        disposeLayers(layersRef.current)
-        const layers = buildAllLayers(enuPositions, refPlaneY)
-        setup.add(layers.refPlane!)
-        setup.add(layers.projectionLines!)
-        setup.add(layers.groundProjection!)
-        layersRef.current = layers
-      }
+      const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
+      buildDynamicLayers(trajectory.line.parent, scaledENU)
     },
     [],
   )
 
   const changeReferencePlane = useCallback(
-    (track: Track, altitudeScale: number, mode: ReferencePlaneMode) => {
+    (track: Track, altitudeScale: number, mode: ReferencePlaneMode, trajectoryScale: number) => {
       const trajectory = trajectoryRef.current
       if (!trajectory) return
 
-      const enuPositions = wgs84ToENU(track.points, altitudeScale)
-      const refPlaneY = getRefPlaneY(enuPositions, mode)
+      const unscaledENU = wgs84ToENU(track.points, 1, trajectoryScale)
+      buildFixedLayers(trajectory.line.parent, unscaledENU, mode)
 
-      const setup = trajectory.line.parent
-      if (setup) {
-        disposeLayers(layersRef.current)
-        const layers = buildAllLayers(enuPositions, refPlaneY)
-        setup.add(layers.refPlane!)
-        setup.add(layers.projectionLines!)
-        setup.add(layers.groundProjection!)
-        layersRef.current = layers
+      const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
+      buildDynamicLayers(trajectory.line.parent, scaledENU)
+    },
+    [],
+  )
+
+  /** Rebuild everything with new trajectory scale */
+  const changeTrajectoryScale = useCallback(
+    (track: Track, altitudeScale: number, referencePlaneMode: ReferencePlaneMode, trajectoryScale: number) => {
+      const trajectory = trajectoryRef.current
+      if (!trajectory) return
+
+      updateAltitudeScale(track, trajectory.line, altitudeScale, trajectoryScale)
+
+      if (markersRef.current) {
+        const oldM = markersRef.current
+        const newM = buildMarkers(track, altitudeScale, trajectoryScale)
+        oldM.start.position.copy(newM.start.position)
+        oldM.end.position.copy(newM.end.position)
+        newM.dispose()
+      }
+
+      const unscaledENU = wgs84ToENU(track.points, 1, trajectoryScale)
+      buildFixedLayers(trajectory.line.parent, unscaledENU, referencePlaneMode)
+
+      const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
+      buildDynamicLayers(trajectory.line.parent, scaledENU)
+    },
+    [],
+  )
+
+  const applyLayerVisibility = useCallback(
+    (layers: LayerVisibility) => {
+      const l = layersRef.current
+      const m = markersRef.current
+      if (l.refPlane) l.refPlane.visible = layers.referencePlane
+      if (l.projectionLines) l.projectionLines.visible = layers.projectionLines
+      if (l.groundProjection) l.groundProjection.visible = layers.groundProjection
+      if (l.compass) l.compass.visible = layers.compass
+      if (m) {
+        m.start.visible = layers.markers
+        m.end.visible = layers.markers
       }
     },
     [],
@@ -180,6 +235,8 @@ export function useTrajectory() {
     changeAltitudeScale,
     changeColorMode,
     changeReferencePlane,
+    changeTrajectoryScale,
+    applyLayerVisibility,
     updateRes,
     dispose,
   }

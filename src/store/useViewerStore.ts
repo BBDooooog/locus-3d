@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { Track, ColorMode, ViewerState, ViewerSettings, ReferencePlaneMode } from '../types/track'
+import type { Track, ColorMode, ViewerState, ViewerSettings, ReferencePlaneMode, LayerVisibility } from '../types/track'
 
 interface ViewerStore {
   // App state
@@ -25,23 +25,35 @@ interface ViewerStore {
   setError: (message: string) => void
   setTrack: (track: Track, fileName: string) => void
   setAltitudeScale: (scale: number) => void
+  setTrajectoryScale: (scale: number) => void
   setColorMode: (mode: ColorMode) => void
   setAutoRotate: (on: boolean) => void
   setAutoRotateSpeed: (speed: number) => void
   setFlyoverPlaying: (playing: boolean) => void
   setFlyoverSpeed: (speed: number) => void
   setReferencePlaneMode: (mode: ReferencePlaneMode) => void
+  toggleLayer: (layer: keyof LayerVisibility) => void
   showToolbar: () => void
   hideToolbar: () => void
   reset: () => void
 }
 
+const defaultLayerVisibility: LayerVisibility = {
+  referencePlane: true,
+  projectionLines: true,
+  groundProjection: true,
+  compass: true,
+  markers: true,
+}
+
 const defaultSettings: ViewerSettings = {
   altitudeScale: 3,
+  trajectoryScale: 0.5,
   colorMode: 'altitude',
   autoRotate: true,
   autoRotateSpeed: 2,
   referencePlaneMode: 'minAltitude',
+  layers: { ...defaultLayerVisibility },
 }
 
 export const useViewerStore = create<ViewerStore>((set) => ({
@@ -60,6 +72,8 @@ export const useViewerStore = create<ViewerStore>((set) => ({
     set({ track, fileName, state: 'loaded', errorMessage: '' }),
   setAltitudeScale: (scale) =>
     set((s) => ({ settings: { ...s.settings, altitudeScale: scale } })),
+  setTrajectoryScale: (scale) =>
+    set((s) => ({ settings: { ...s.settings, trajectoryScale: scale } })),
   setColorMode: (mode) =>
     set((s) => ({ settings: { ...s.settings, colorMode: mode } })),
   setAutoRotate: (on) =>
@@ -70,6 +84,16 @@ export const useViewerStore = create<ViewerStore>((set) => ({
   setFlyoverSpeed: (speed) => set({ flyoverSpeed: speed }),
   setReferencePlaneMode: (mode) =>
     set((s) => ({ settings: { ...s.settings, referencePlaneMode: mode } })),
+  toggleLayer: (layer) =>
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        layers: {
+          ...s.settings.layers,
+          [layer]: !s.settings.layers[layer],
+        },
+      },
+    })),
   showToolbar: () => set({ toolbarVisible: true }),
   hideToolbar: () => set({ toolbarVisible: false }),
   reset: () =>

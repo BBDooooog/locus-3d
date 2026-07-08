@@ -8,8 +8,14 @@ import { useFlyover } from './useFlyover'
 export default function SceneCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const { getSetup, fitCameraToBox } = useScene(containerRef)
-  const { loadTrack, changeAltitudeScale, changeColorMode, changeReferencePlane } =
-    useTrajectory()
+  const {
+    loadTrack,
+    changeAltitudeScale,
+    changeColorMode,
+    changeReferencePlane,
+    changeTrajectoryScale,
+    applyLayerVisibility,
+  } = useTrajectory()
   const { buildCurve, startFlyover, pauseFlyover, stopFlyover } = useFlyover()
 
   const track = useViewerStore((s) => s.track)
@@ -27,6 +33,7 @@ export default function SceneCanvas() {
       settings.colorMode,
       settings.altitudeScale,
       settings.referencePlaneMode,
+      settings.trajectoryScale,
     )
     buildCurve(track, settings.altitudeScale)
 
@@ -46,12 +53,12 @@ export default function SceneCanvas() {
     setup.controls.autoRotateSpeed = settings.autoRotateSpeed
   }, [settings.autoRotate, settings.autoRotateSpeed, track, getSetup])
 
-  // Sync altitude scale
+  // Sync altitude scale (only affects trajectory + projection lines)
   useEffect(() => {
     if (!track) return
-    changeAltitudeScale(track, settings.altitudeScale, settings.referencePlaneMode)
+    changeAltitudeScale(track, settings.altitudeScale, settings.trajectoryScale)
     buildCurve(track, settings.altitudeScale)
-  }, [settings.altitudeScale, track, changeAltitudeScale, buildCurve, settings.referencePlaneMode])
+  }, [settings.altitudeScale, track, settings.trajectoryScale, changeAltitudeScale, buildCurve])
 
   // Sync color mode
   useEffect(() => {
@@ -62,8 +69,19 @@ export default function SceneCanvas() {
   // Sync reference plane mode
   useEffect(() => {
     if (!track) return
-    changeReferencePlane(track, settings.altitudeScale, settings.referencePlaneMode)
-  }, [settings.referencePlaneMode, track, settings.altitudeScale, changeReferencePlane])
+    changeReferencePlane(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale)
+  }, [settings.referencePlaneMode, track, settings.altitudeScale, settings.trajectoryScale, changeReferencePlane])
+
+  // Sync trajectory scale (uniform scaling for everything)
+  useEffect(() => {
+    if (!track) return
+    changeTrajectoryScale(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale)
+  }, [settings.trajectoryScale, track, settings.altitudeScale, settings.referencePlaneMode, changeTrajectoryScale])
+
+  // Sync layer visibility
+  useEffect(() => {
+    applyLayerVisibility(settings.layers)
+  }, [settings.layers, applyLayerVisibility])
 
   // Flyover
   useEffect(() => {

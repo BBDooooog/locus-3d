@@ -12,8 +12,8 @@ export interface Markers {
  * Create start (green) and end (red) sphere markers.
  * Sizes are set relative to the trajectory extent.
  */
-export function buildMarkers(track: Track, altitudeScale: number = 3): Markers {
-  const allPositions = wgs84ToENU(track.points, altitudeScale)
+export function buildMarkers(track: Track, altitudeScale: number = 3, trajectoryScale: number = 1): Markers {
+  const allPositions = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
 
   // Determine marker radius based on actual bounding box size
   let radius = 1 // default

@@ -18,6 +18,7 @@ export type { ENUPoint }
 export function wgs84ToENU(
   points: TrackPoint[],
   altitudeScale: number = 1,
+  trajectoryScale: number = 1,
 ): Float32Array {
   if (points.length === 0) return new Float32Array(0)
 
@@ -30,12 +31,13 @@ export function wgs84ToENU(
   const enuPoints = batchEcefToENU(ecefPoints, refLat, refLng)
 
   // Step 3: Pack into Float32Array [East, Up, North] → [X, Y, Z]
+  // X, Z scaled by trajectoryScale; Y scaled by both altitudeScale and trajectoryScale
   const positions = new Float32Array(points.length * 3)
   for (let i = 0; i < enuPoints.length; i++) {
     const idx = i * 3
-    positions[idx] = -enuPoints[i].east // Three.js X (negated so East→right)
-    positions[idx + 1] = enuPoints[i].up * altitudeScale // Three.js Y
-    positions[idx + 2] = enuPoints[i].north // Three.js Z
+    positions[idx] = -enuPoints[i].east * trajectoryScale // Three.js X
+    positions[idx + 1] = enuPoints[i].up * altitudeScale * trajectoryScale // Three.js Y
+    positions[idx + 2] = enuPoints[i].north * trajectoryScale // Three.js Z
   }
 
   return positions

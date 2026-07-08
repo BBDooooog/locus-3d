@@ -1,4 +1,7 @@
 import * as THREE from 'three'
+import { Line2 } from 'three/examples/jsm/lines/Line2.js'
+import { LineMaterial } from 'three/examples/jsm/lines/LineMaterial.js'
+import { LineGeometry } from 'three/examples/jsm/lines/LineGeometry.js'
 
 export interface PlaneBounds {
   minX: number
@@ -161,31 +164,46 @@ export function buildCompassLabels(
   const planeSize = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ)
   const halfLen = planeSize * 0.1 // cross arm half-length = 10% of plane
 
-  const y = refPlaneY + 0.15 // slightly above plane
+  const y = refPlaneY + 1.0 // well above plane to avoid z-fighting
 
-  // Cross arrows: two perpendicular lines (N-S and E-W)
-  const vertices = new Float32Array([
-    // N-S line
+  // Cross lines using Line2 for variable width (thicker than 1px)
+  // N-S line
+  const nsGeom = new LineGeometry()
+  nsGeom.setPositions([
     centerX, y, centerZ + halfLen,
     centerX, y, centerZ - halfLen,
-    // E-W line
-    centerX + halfLen, y, centerZ,
-    centerX - halfLen, y, centerZ,
   ])
-
-  const lineGeom = new THREE.BufferGeometry()
-  lineGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
-  const lineMat = new THREE.LineBasicMaterial({
-    color: 0x333344,
+  const nsMat = new LineMaterial({
+    color: 0x444455,
+    linewidth: 2,
+    worldUnits: false,
     transparent: true,
     opacity: 0.7,
     depthTest: true,
-    depthWrite: true,
+    depthWrite: false,
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
   })
-  group.add(new THREE.LineSegments(lineGeom, lineMat))
+  group.add(new Line2(nsGeom, nsMat))
 
-  // Arrow tips: small triangles at each end
-  const tipSize = planeSize * 0.015
+  // E-W line
+  const ewGeom = new LineGeometry()
+  ewGeom.setPositions([
+    centerX + halfLen, y, centerZ,
+    centerX - halfLen, y, centerZ,
+  ])
+  const ewMat = new LineMaterial({
+    color: 0x444455,
+    linewidth: 2,
+    worldUnits: false,
+    transparent: true,
+    opacity: 0.7,
+    depthTest: true,
+    depthWrite: false,
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+  })
+  group.add(new Line2(ewGeom, ewMat))
+
+  // Direction labels
   const tips = [
     { label: 'N', x: centerX, z: centerZ + halfLen },
     { label: 'S', x: centerX, z: centerZ - halfLen },
@@ -196,9 +214,8 @@ export function buildCompassLabels(
   const spriteSize = planeSize * 0.04
 
   for (const { label, x, z } of tips) {
-    // Simple text sprite (no background)
     const sprite = makeSimpleTextSprite(label)
-    sprite.position.set(x, y + 0.1, z)
+    sprite.position.set(x, y + 0.2, z)
     sprite.scale.set(spriteSize, spriteSize, 1)
     group.add(sprite)
   }
@@ -227,7 +244,7 @@ function makeSimpleTextSprite(text: string): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.7,
+    opacity: 0.75,
     depthTest: true,
     depthWrite: false,
   })
@@ -262,6 +279,10 @@ export function disposeLayers(layers: {
         const mat = child.material as THREE.SpriteMaterial
         mat.map?.dispose()
         mat.dispose()
+      }
+      if (child.type === 'Line2') {
+        child.geometry.dispose()
+        ;(child.material as THREE.Material).dispose()
       }
     })
   }

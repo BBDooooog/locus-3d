@@ -19,10 +19,20 @@ export type ViewerState = 'empty' | 'loading' | 'error' | 'loaded'
 
 export type ReferencePlaneMode = 'minAltitude' | 'seaLevel'
 
+export interface LayerVisibility {
+  referencePlane: boolean
+  projectionLines: boolean
+  groundProjection: boolean
+  compass: boolean
+  markers: boolean
+}
+
 export interface ViewerSettings {
   altitudeScale: number
+  trajectoryScale: number
   colorMode: ColorMode
   autoRotate: boolean
   autoRotateSpeed: number
   referencePlaneMode: ReferencePlaneMode
+  layers: LayerVisibility
 }
