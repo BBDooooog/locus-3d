@@ -149,7 +149,7 @@ export function buildGroundProjection(
 /**
  * Build compass cross + direction labels on the reference plane.
  * Dark-colored cross arrows spanning ~20% of plane, with N/S/E/W letters at tips.
- * ENU mapping: East → +X, North → +Z.
+ * ENU mapping: East → -X (negated), North → +Z.
  */
 export function buildCompassLabels(
   bounds: PlaneBounds,
@@ -189,8 +189,8 @@ export function buildCompassLabels(
   const tips = [
     { label: 'N', x: centerX, z: centerZ + halfLen },
     { label: 'S', x: centerX, z: centerZ - halfLen },
-    { label: 'E', x: centerX + halfLen, z: centerZ },
-    { label: 'W', x: centerX - halfLen, z: centerZ },
+    { label: 'E', x: centerX - halfLen, z: centerZ },
+    { label: 'W', x: centerX + halfLen, z: centerZ },
   ]
 
   const spriteSize = planeSize * 0.04

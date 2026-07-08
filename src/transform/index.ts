@@ -11,7 +11,7 @@ export type { ENUPoint }
  * The first point becomes the ENU origin.
  *
  * Mapping to Three.js:
- *   East  → X
+ *   East  → -X (negated so East appears on the right from default camera)
  *   Up    → Y (with altitudeScale applied)
  *   North → Z
  */
@@ -33,7 +33,7 @@ export function wgs84ToENU(
   const positions = new Float32Array(points.length * 3)
   for (let i = 0; i < enuPoints.length; i++) {
     const idx = i * 3
-    positions[idx] = enuPoints[i].east // Three.js X
+    positions[idx] = -enuPoints[i].east // Three.js X (negated so East→right)
     positions[idx + 1] = enuPoints[i].up * altitudeScale // Three.js Y
     positions[idx + 2] = enuPoints[i].north // Three.js Z
   }
