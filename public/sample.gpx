@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="Locus Sample"
+  xmlns="http://www.topografix.com/GPX/1/1"
+  xmlns:gpxtpx="http://www.garmin.com/xmlschemas/TrackPointExtension/v1">
+  <trk>
+    <name>Morning Trail Run</name>
+    <trkseg>
+      <trkpt lat="30.2741" lon="120.1553">
+        <ele>15</ele><time>2025-06-15T06:00:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2750" lon="120.1560">
+        <ele>18</ele><time>2025-06-15T06:00:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2762" lon="120.1565">
+        <ele>22</ele><time>2025-06-15T06:00:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2775" lon="120.1570">
+        <ele>28</ele><time>2025-06-15T06:00:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2785" lon="120.1578">
+        <ele>35</ele><time>2025-06-15T06:01:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2798" lon="120.1590">
+        <ele>45</ele><time>2025-06-15T06:01:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2805" lon="120.1602">
+        <ele>58</ele><time>2025-06-15T06:01:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2812" lon="120.1618">
+        <ele>72</ele><time>2025-06-15T06:01:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2820" lon="120.1635">
+        <ele>90</ele><time>2025-06-15T06:02:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2825" lon="120.1652">
+        <ele>108</ele><time>2025-06-15T06:02:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2820" lon="120.1670">
+        <ele>120</ele><time>2025-06-15T06:02:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2815" lon="120.1685">
+        <ele>125</ele><time>2025-06-15T06:02:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2810" lon="120.1702">
+        <ele>130</ele><time>2025-06-15T06:03:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2802" lon="120.1718">
+        <ele>128</ele><time>2025-06-15T06:03:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2795" lon="120.1730">
+        <ele>118</ele><time>2025-06-15T06:03:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2788" lon="120.1745">
+        <ele>105</ele><time>2025-06-15T06:03:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2780" lon="120.1758">
+        <ele>95</ele><time>2025-06-15T06:04:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2772" lon="120.1770">
+        <ele>82</ele><time>2025-06-15T06:04:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2760" lon="120.1782">
+        <ele>68</ele><time>2025-06-15T06:04:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2750" lon="120.1795">
+        <ele>52</ele><time>2025-06-15T06:04:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2742" lon="120.1808">
+        <ele>40</ele><time>2025-06-15T06:05:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2735" lon="120.1820">
+        <ele>32</ele><time>2025-06-15T06:05:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2730" lon="120.1835">
+        <ele>25</ele><time>2025-06-15T06:05:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2725" lon="120.1850">
+        <ele>20</ele><time>2025-06-15T06:05:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2728" lon="120.1865">
+        <ele>18</ele><time>2025-06-15T06:06:00Z</time>
+      </trkpt>
+      <trkpt lat="30.2732" lon="120.1880">
+        <ele>16</ele><time>2025-06-15T06:06:15Z</time>
+      </trkpt>
+      <trkpt lat="30.2740" lon="120.1892">
+        <ele>14</ele><time>2025-06-15T06:06:30Z</time>
+      </trkpt>
+      <trkpt lat="30.2748" lon="120.1898">
+        <ele>12</ele><time>2025-06-15T06:06:45Z</time>
+      </trkpt>
+      <trkpt lat="30.2755" lon="120.1902">
+        <ele>10</ele><time>2025-06-15T06:07:00Z</time>
+      </trkpt>
+    </trkseg>
+  </trk>
+</gpx>
