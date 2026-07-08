@@ -147,8 +147,8 @@ export function buildGroundProjection(
 }
 
 /**
- * Build compass direction labels (N / S / E / W) as canvas-based sprites.
- * Placed at the center of the reference plane, spanning ~20% of plane size.
+ * Build compass cross + direction labels on the reference plane.
+ * Dark-colored cross arrows spanning ~20% of plane, with N/S/E/W letters at tips.
  * ENU mapping: East → +X, North → +Z.
  */
 export function buildCompassLabels(
@@ -158,25 +158,47 @@ export function buildCompassLabels(
   const group = new THREE.Group()
   const centerX = (bounds.minX + bounds.maxX) / 2
   const centerZ = (bounds.minZ + bounds.maxZ) / 2
-  const planeW = bounds.maxX - bounds.minX
-  const planeH = bounds.maxZ - bounds.minZ
-  const planeSize = Math.max(planeW, planeH)
+  const planeSize = Math.max(bounds.maxX - bounds.minX, bounds.maxZ - bounds.minZ)
+  const halfLen = planeSize * 0.1 // cross arm half-length = 10% of plane
 
-  // Offset from center = 10% of plane (so compass spans ~20%)
-  const offset = planeSize * 0.1
-  // Each sprite size = 8% of plane
-  const spriteSize = planeSize * 0.08
+  const y = refPlaneY + 0.15 // slightly above plane
 
-  const directions = [
-    { label: 'N', x: centerX, z: centerZ + offset },
-    { label: 'S', x: centerX, z: centerZ - offset },
-    { label: 'E', x: centerX + offset, z: centerZ },
-    { label: 'W', x: centerX - offset, z: centerZ },
+  // Cross arrows: two perpendicular lines (N-S and E-W)
+  const vertices = new Float32Array([
+    // N-S line
+    centerX, y, centerZ + halfLen,
+    centerX, y, centerZ - halfLen,
+    // E-W line
+    centerX + halfLen, y, centerZ,
+    centerX - halfLen, y, centerZ,
+  ])
+
+  const lineGeom = new THREE.BufferGeometry()
+  lineGeom.setAttribute('position', new THREE.BufferAttribute(vertices, 3))
+  const lineMat = new THREE.LineBasicMaterial({
+    color: 0x333344,
+    transparent: true,
+    opacity: 0.7,
+    depthTest: true,
+    depthWrite: true,
+  })
+  group.add(new THREE.LineSegments(lineGeom, lineMat))
+
+  // Arrow tips: small triangles at each end
+  const tipSize = planeSize * 0.015
+  const tips = [
+    { label: 'N', x: centerX, z: centerZ + halfLen },
+    { label: 'S', x: centerX, z: centerZ - halfLen },
+    { label: 'E', x: centerX + halfLen, z: centerZ },
+    { label: 'W', x: centerX - halfLen, z: centerZ },
   ]
 
-  for (const { label, x, z } of directions) {
-    const sprite = makeTextSprite(label)
-    sprite.position.set(x, refPlaneY + 0.3, z)
+  const spriteSize = planeSize * 0.04
+
+  for (const { label, x, z } of tips) {
+    // Simple text sprite (no background)
+    const sprite = makeSimpleTextSprite(label)
+    sprite.position.set(x, y + 0.1, z)
     sprite.scale.set(spriteSize, spriteSize, 1)
     group.add(sprite)
   }
@@ -184,33 +206,19 @@ export function buildCompassLabels(
   return group
 }
 
-/** Create a single text sprite with a prominent circular background */
-function makeTextSprite(text: string): THREE.Sprite {
-  const size = 256
+/** Create a minimal text sprite — just the letter, no background */
+function makeSimpleTextSprite(text: string): THREE.Sprite {
+  const size = 128
   const canvas = document.createElement('canvas')
   canvas.width = size
   canvas.height = size
   const ctx = canvas.getContext('2d')!
 
-  const cx = size / 2
-  const cy = size / 2
-  const r = size * 0.42
-
-  // Circular background — dark with subtle border
-  ctx.beginPath()
-  ctx.arc(cx, cy, r, 0, Math.PI * 2)
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'
-  ctx.fill()
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'
-  ctx.lineWidth = 3
-  ctx.stroke()
-
-  // Bold text
-  ctx.fillStyle = '#ffffff'
-  ctx.font = 'bold 100px Inter, sans-serif'
+  ctx.fillStyle = '#666677'
+  ctx.font = 'bold 80px Inter, sans-serif'
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
-  ctx.fillText(text, cx, cy + 2)
+  ctx.fillText(text, size / 2, size / 2)
 
   const texture = new THREE.CanvasTexture(canvas)
   texture.minFilter = THREE.LinearFilter
@@ -219,7 +227,7 @@ function makeTextSprite(text: string): THREE.Sprite {
   const material = new THREE.SpriteMaterial({
     map: texture,
     transparent: true,
-    opacity: 0.8,
+    opacity: 0.7,
     depthTest: true,
     depthWrite: false,
   })
