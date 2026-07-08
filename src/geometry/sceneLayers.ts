@@ -281,8 +281,9 @@ export function disposeLayers(layers: {
         mat.dispose()
       }
       if (child.type === 'Line2') {
-        child.geometry.dispose()
-        ;(child.material as THREE.Material).dispose()
+        const line = child as THREE.Line
+        line.geometry.dispose()
+        ;(line.material as THREE.Material).dispose()
       }
     })
   }

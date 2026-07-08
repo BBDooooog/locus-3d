@@ -134,7 +134,7 @@ export function useTrajectory() {
   )
 
   const changeAltitudeScale = useCallback(
-    (track: Track, altitudeScale: number, trajectoryScale: number) => {
+    (track: Track, altitudeScale: number, trajectoryScale: number, layers: LayerVisibility) => {
       const trajectory = trajectoryRef.current
       if (!trajectory) return
 
@@ -150,12 +150,13 @@ export function useTrajectory() {
 
       const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
       buildDynamicLayers(trajectory.line.parent, scaledENU)
+      applyLayerVisibility(layers)
     },
     [],
   )
 
   const changeReferencePlane = useCallback(
-    (track: Track, altitudeScale: number, mode: ReferencePlaneMode, trajectoryScale: number) => {
+    (track: Track, altitudeScale: number, mode: ReferencePlaneMode, trajectoryScale: number, layers: LayerVisibility) => {
       const trajectory = trajectoryRef.current
       if (!trajectory) return
 
@@ -164,13 +165,14 @@ export function useTrajectory() {
 
       const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
       buildDynamicLayers(trajectory.line.parent, scaledENU)
+      applyLayerVisibility(layers)
     },
     [],
   )
 
   /** Rebuild everything with new trajectory scale */
   const changeTrajectoryScale = useCallback(
-    (track: Track, altitudeScale: number, referencePlaneMode: ReferencePlaneMode, trajectoryScale: number) => {
+    (track: Track, altitudeScale: number, referencePlaneMode: ReferencePlaneMode, trajectoryScale: number, layers: LayerVisibility) => {
       const trajectory = trajectoryRef.current
       if (!trajectory) return
 
@@ -189,6 +191,7 @@ export function useTrajectory() {
 
       const scaledENU = wgs84ToENU(track.points, altitudeScale, trajectoryScale)
       buildDynamicLayers(trajectory.line.parent, scaledENU)
+      applyLayerVisibility(layers)
     },
     [],
   )

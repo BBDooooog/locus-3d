@@ -56,9 +56,9 @@ export default function SceneCanvas() {
   // Sync altitude scale (only affects trajectory + projection lines)
   useEffect(() => {
     if (!track) return
-    changeAltitudeScale(track, settings.altitudeScale, settings.trajectoryScale)
+    changeAltitudeScale(track, settings.altitudeScale, settings.trajectoryScale, settings.layers)
     buildCurve(track, settings.altitudeScale)
-  }, [settings.altitudeScale, track, settings.trajectoryScale, changeAltitudeScale, buildCurve])
+  }, [settings.altitudeScale, track, settings.trajectoryScale, settings.layers, changeAltitudeScale, buildCurve])
 
   // Sync color mode
   useEffect(() => {
@@ -69,14 +69,14 @@ export default function SceneCanvas() {
   // Sync reference plane mode
   useEffect(() => {
     if (!track) return
-    changeReferencePlane(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale)
-  }, [settings.referencePlaneMode, track, settings.altitudeScale, settings.trajectoryScale, changeReferencePlane])
+    changeReferencePlane(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale, settings.layers)
+  }, [settings.referencePlaneMode, track, settings.altitudeScale, settings.trajectoryScale, settings.layers, changeReferencePlane])
 
   // Sync trajectory scale (uniform scaling for everything)
   useEffect(() => {
     if (!track) return
-    changeTrajectoryScale(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale)
-  }, [settings.trajectoryScale, track, settings.altitudeScale, settings.referencePlaneMode, changeTrajectoryScale])
+    changeTrajectoryScale(track, settings.altitudeScale, settings.referencePlaneMode, settings.trajectoryScale, settings.layers)
+  }, [settings.trajectoryScale, track, settings.altitudeScale, settings.referencePlaneMode, settings.layers, changeTrajectoryScale])
 
   // Sync layer visibility
   useEffect(() => {
